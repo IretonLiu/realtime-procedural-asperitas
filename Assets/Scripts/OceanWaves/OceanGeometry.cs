@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode]
 public class OceanGeometry : MonoBehaviour
 {
     [Header("FourierGrid Settings")]
@@ -32,7 +31,10 @@ public class OceanGeometry : MonoBehaviour
     public Texture2D gaussianNoiseTexture1;
     public Texture2D gaussianNoiseTexture2;
 
-    public RenderTexture heightField;
+    public RenderTexture displacementX;
+    public RenderTexture displacementY;
+    public RenderTexture displacementZ;
+
 
     bool shouldUpdateStatic = false;
     FourierGrid fourierGrid;
@@ -58,11 +60,15 @@ public class OceanGeometry : MonoBehaviour
 
             shouldUpdateStatic = false;
         }
-        waveGenerator.calcFourierAmplitude();
-        waveGenerator.fft();
+        waveGenerator.CalcFourierAmplitude();
+        waveGenerator.CalcDisplacement();
+
+        //waveGenerator.fft('x');
+        //waveGenerator.fft('z');
         // matVis.SetTexture("_MainTex", waveGenerator.displacement);
-        heightField = waveGenerator.displacement;
-        heightFieldMaterial.SetTexture("_HeightMap", waveGenerator.displacement);
+        heightFieldMaterial.SetTexture("_DisplacementY", waveGenerator.displacementY);
+        heightFieldMaterial.SetTexture("_DisplacementX", waveGenerator.displacementX);
+        heightFieldMaterial.SetTexture("_DisplacementZ", waveGenerator.displacementZ);
 
         //     Texture2D tex2 = new Texture2D(h0minusk_RenderTexture.width, h0minusk_RenderTexture.height, TextureFormat.RGB24, false);
         //     RenderTexture.active = h0minusk_RenderTexture;
@@ -105,9 +111,9 @@ public class OceanGeometry : MonoBehaviour
         Color[] pixels1 = gaussianNoiseTexture1.GetPixels();
         Color[] pixels2 = gaussianNoiseTexture2.GetPixels();
         waveGenerator = new WaveGenerator(gaussianNoiseTexture1, gaussianNoiseTexture2, fourierGrid);
-        waveGenerator.setComputeShader(initialSpectrumCompute, fourierAmplitudeCompute,
+        waveGenerator.SetComputeShader(initialSpectrumCompute, fourierAmplitudeCompute,
                                         butterflyTextureCompute, butterflyCompute, inversePermutationCompute);
-        waveGenerator.setPhillipsParams(windSpeed, windDirection, A);
+        waveGenerator.SetPhillipsParams(windSpeed, windDirection, A);
         waveGenerator.InitialSpectrum();
         waveGenerator.PrecomputeTwiddleFactorsAndInputIndices();
 

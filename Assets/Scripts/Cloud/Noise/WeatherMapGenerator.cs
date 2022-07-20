@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-[ExecuteInEditMode, ImageEffectAllowedInSceneView]
+[ImageEffectAllowedInSceneView]
 
 public class WeatherMapGenerator : MonoBehaviour
 {

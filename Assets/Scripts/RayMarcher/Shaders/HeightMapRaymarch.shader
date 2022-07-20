@@ -19,6 +19,7 @@ Shader "Unlit/HeightMapRaymarch"
             #pragma fragment frag
             // make fog work
             #pragma multi_compile_fog
+            #pragma enable_d3d11_debug_symbols
 
             #include "UnityCG.cginc"
 
@@ -26,7 +27,7 @@ Shader "Unlit/HeightMapRaymarch"
             #define MAX_DIST 20000
             #define SURF_DIST 1e-5
             #define SPHERE_RADIUS 20000
-            #define HORIZON_HEIGHT 19920
+            #define HORIZON_HEIGHT 19980
 
 
             struct appdata
@@ -47,8 +48,15 @@ Shader "Unlit/HeightMapRaymarch"
             float4 _MainTex_ST;
             sampler2D _CameraDepthTexture;
             
-            sampler2D _HeightMap;
-            float4 _HeightMap_ST;
+            sampler2D _DisplacementY;
+            float4 _DisplacementY_ST;
+
+            sampler2D _DisplacementX;
+            float4 _DisplacementX_ST;
+
+            sampler2D _DisplacementZ;
+            float4 _DisplacementZ_ST;
+
 
             v2f vert (appdata v)
             {
@@ -66,27 +74,54 @@ Shader "Unlit/HeightMapRaymarch"
                 return nl + (value - ol) * (nh - nl) / (oh - ol);
             }
 
+            // raymarch settings
+
+            float heightMultiplier;
+            float raymarchStepCount;
+            float raymarchStepSize;
+            float cloudThickness;
+            float distanceDampingFactor;
+
             float2 GetUV(float3 p){
-                int d = 100;
+                int d = 25;
                 float u = (p.x + d/2)/d;
                 float v = (p.z + d/2) /d;
                 return float2(u, v);
             }
 
-            float GetHeightFromMap(float3 p){
-                float4 height = tex2Dlod(_HeightMap, float4(GetUV(p) * 0.1, 0, 0));
-                return height.r;
+            float3 GetHeightFromMap(float3 p) {
+                float4 height = tex2Dlod(_DisplacementY, float4(GetUV(p) * 0.1, 0, 0));
+                return float3(0, height.r, 0);
+            }
+
+            float3 GetDisplacementFromMap(float3 p){
+                float2 uv = GetUV(p)* 0.1;
+
+                float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
+
+                float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
+                float z = tex2Dlod(_DisplacementZ, float4(uv, 0, 0)).r;
+
+                return float3(x, y, z);
             }
 
             float sdSphere(float3 p, float s){
                 return length(p) - s; 
             }
 
-            float GetDist(float3 p){
+            float GetDist(float3 p, bool isInner, float distanceDamping){
 
                 float3 translation = float3(0, -HORIZON_HEIGHT, 0);
-                float d1 = -sdSphere(p-translation, SPHERE_RADIUS) + 10*GetHeightFromMap(p);
 
+                float d1;
+                if (isInner) {
+                    float3 displacement = distanceDamping * GetDisplacementFromMap(p);
+                    d1 = -sdSphere(p - translation + displacement, SPHERE_RADIUS);
+                }
+
+                else
+                    d1 = -sdSphere(p - translation, SPHERE_RADIUS + cloudThickness);
+                
                 // float d2 = p.y -h;
                 // float d = sdSphere(p, 10000);
 
@@ -95,12 +130,13 @@ Shader "Unlit/HeightMapRaymarch"
             }
 
 
-            float Raymarch(float3 ro, float3 rd, float cullDepth){
+            float Raymarch(float3 ro, float3 rd, float cullDepth, bool isInner){
                 float dO = 0;
                 float dS;
+                float damping = remap(2 *dot(rd, float3(0.0, 1.0, 0.0)), 0.0, 2.0, distanceDampingFactor, 1.0);
                 for (int i = 0; i < MAX_STEPS; i++){
                     float3 p = ro + dO * rd;
-                    dS = GetDist(p);
+                    dS = GetDist(p, isInner, damping);
                     dO += dS;
 
                     if (abs(dS) < SURF_DIST || abs(dO) > MAX_DIST || abs(dO) > cullDepth ){
@@ -110,15 +146,13 @@ Shader "Unlit/HeightMapRaymarch"
                 return dO;
             }
 
-            float3 GetNormal(float3 p){
-                float2 e = float2(1e-2, 0); // epsilon
-                float3 n = GetDist(p) - float3(GetDist(p-e.xyy), GetDist(p-e.yxy), GetDist(p-e.yyx));
-                return normalize(n);
-            }
+            //float3 GetNormal(float3 p){
+            //    float2 e = float2(1e-2, 0); // epsilon
+            //    float3 n = GetDist(p) - float3(GetDist(p-e.xyy), GetDist(p-e.yxy), GetDist(p-e.yyx));
+            //    return normalize(n);
+            //}
 
-            float raymarchStepCount;
-            float raymarchStepSize;
-            float cloudThickness;
+
 
             float time;
             float baseNoiseScale;
@@ -237,7 +271,7 @@ Shader "Unlit/HeightMapRaymarch"
 
                 //}
 
-                return finalCloud;
+                return finalCloud * 0.1;
             }
 
             // march from sample point to light source
@@ -251,6 +285,7 @@ Shader "Unlit/HeightMapRaymarch"
                 for (int i = 0; i < 6; i++) {
                     samplePos += dirToLight * raymarchStepSize;
                     totalDensity += max(0, sampleDensity(samplePos) * raymarchStepSize);
+                    //totalDensity += max(0, 0.1 * raymarchStepSize);
                     // dstTravelled += stepSize;
                 }
 
@@ -261,16 +296,16 @@ Shader "Unlit/HeightMapRaymarch"
             }
             
 
-            float MaxMarchDist(float3 rd) {
-                float cInner = sqrt(pow(SPHERE_RADIUS, 2) - pow(HORIZON_HEIGHT, 2));
-                float cOuter = sqrt(pow(SPHERE_RADIUS + cloudThickness, 2) - pow(HORIZON_HEIGHT, 2));
-                float3 up = float3 (0, 1, 0);
-                float theta = dot(rd, up);
-                float maxDist = (cOuter - cInner) * (abs(cos(theta))) + (cloudThickness) * (1-abs(cos(theta)));
+            //float MaxMarchDist(float3 rd) {
+            //    float c = sqrt(pow(SPHERE_RADIUS + cloudThickness, 2) - pow(HORIZON_HEIGHT, 2));
+            //    float3 up = float3 (0, 1, 0);
+            //    float cosTheta = dot(rd, up);
+            //    float cos2Theta = 2 * cosTheta * cosTheta - 1;
+            //    float maxDist = (SPHERE_RADIUS - HORIZON_HEIGHT + cloudThickness) * (1 + cos2Theta) +  c * (1 - cos2Theta);
 
-                return maxDist;
+            //    return maxDist*0.5;
 
-            }
+            //}
 
             fixed4 frag (v2f input) : SV_Target
             {
@@ -284,15 +319,14 @@ Shader "Unlit/HeightMapRaymarch"
 
                 float nonLinearDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, input.uv);
                 float depth = LinearEyeDepth(nonLinearDepth) * rayLength;
-                float d = Raymarch(ro, rd, depth);
-                if (d < MAX_DIST && d < depth){
-                    float bound = d + cloudThickness;
-                    float3 p = ro + rd * abs(d);
-                    float3 n = GetNormal(p);
+                float dInner = Raymarch(ro, rd, depth, true);  // distance to inner cloud
+                float dOuter = Raymarch(ro, rd, depth, false); // distance to outer sphere
+                if (dInner < MAX_DIST && dInner < depth){
 
+                    float3 p = ro + rd * abs(dInner);
                     // random offset on the starting position to remove the layering artifact
                     float randomOffset = BlueNoise.SampleLevel(samplerBlueNoise, input.uv * 1000, 0);
-                    float dstTravelled = (randomOffset - 0.5) * 2 * raymarchStepSize * 2;
+                    float dstTravelled = (randomOffset - 0.5)  * raymarchStepSize + dInner;
                     // float dstTravelled = 0;
 
                     float cosAngle = dot(normalize(rd), normalize(_WorldSpaceLightPos0.xyz));
@@ -302,15 +336,12 @@ Shader "Unlit/HeightMapRaymarch"
                     float totalDensity = 0;
                     // start cloud ray march here
 
-                    float maxMarchDst = MaxMarchDist(rd);
-                    int count = 0;
-                    //col.rgb = maxMarchDst;
-                    //return col;
                     // change how ray march is terminated{
                     //for (int i = 0; i < raymarchStepCount; i++) {
-                    while(dstTravelled < maxMarchDst){
+                    while(dstTravelled < dOuter){
                     	float3 startPos = p + rd * (dstTravelled);
-                    	float density = sampleDensity(startPos) * max(0.5,(d * 0.005));
+                    	float density = sampleDensity(startPos) ;
+                        //float density = 0.005 * (d * 0.01);
                     	if (density > 0) {
                     		// totalDensity += density;
                     		float lightTransmittance = lightMarch(startPos);
@@ -319,7 +350,7 @@ Shader "Unlit/HeightMapRaymarch"
 
                     		transmittance *= beer(density * raymarchStepSize, lightAbsorptionThroughCloud);// as the ray marches further in, the more the light will be lost
                     		// Exit early if T is close to zero as further samples won't affect the result much
-                    		if (transmittance < 0.01) {
+                    		if (transmittance < 0.001) {
                     			break;
                     		}
                     	}
@@ -328,7 +359,6 @@ Shader "Unlit/HeightMapRaymarch"
                         //    return float4(1.0, 0.0, 0.0, 0.0);
                         //    
                         //}
-                        count++;
                     	dstTravelled += raymarchStepSize;
 
                     }
@@ -346,8 +376,8 @@ Shader "Unlit/HeightMapRaymarch"
                     //   
                     //}
                     float3 cloudCol = lightEnergy * lightColor.xyz;
-                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol;
-
+                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner / dOuter)* 3;
+                    //col.rgb = d * 0.0001;
 
                 }else col.rgb = tex2D(_MainTex, input.uv);
                 // float3 color = tex2Dlod (_MainTex, float4(i.uv, 0, 0)).rgb;

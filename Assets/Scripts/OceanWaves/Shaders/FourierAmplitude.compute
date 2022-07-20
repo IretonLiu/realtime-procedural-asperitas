@@ -104,8 +104,17 @@ void CSFourierAmplitude (uint3 id : SV_DispatchThreadID)
     // dy for height 
     float2 hkt_dy = ComplexMult(h0k, e_iwt) + ComplexMult(h0minusk_conj, e_miwt);
     float2 hkt_conj = float2(hkt_dy.x, -hkt_dy.y);
-    float2 hkt_dx = ComplexMult(float2(0.0, -k.x/k_mag), hkt_dy);
-    float2 hkt_dz = ComplexMult(float2(0.0, -k.y/k_mag), hkt_dy);
+    float2 hkt_dx;
+    float2 hkt_dz;
+    if (k_mag == 0.0) {
+        hkt_dx = float2(0.0f, 0.0f);
+        hkt_dz = float2(0.0f, 0.0f);
+    }
+    else {
+        hkt_dx = ComplexMult(float2(0.0, -k.x / k_mag), hkt_dy);
+        hkt_dz = ComplexMult(float2(0.0, -k.y / k_mag), hkt_dy);
+    }
+
     // // account for wave movement in the k direction
     // Complex dx; dx.real = 0.0; dx.im = -k.x/k_mag;
     // Complex hkt_dx = c_mul(dx , hkt_dy);

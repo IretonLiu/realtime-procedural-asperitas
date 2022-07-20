@@ -2,17 +2,21 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[ExecuteInEditMode, ImageEffectAllowedInSceneView]
+
 
 public class RayMarch : MonoBehaviour
 {
 
+    [Header("Height Multiplier")]
+    public float heightMultiplier = 10;
 
     [Header("Raymarch Settings")]
     public int stepCount = 30;
-    [Range(1, 10)]
+    [Range(1, 100)]
     public float stepSize = 10;
     public float cloudThickness = 1000;
+    [Range(0, 1)]
+    public float distanceDamping = 0.8f;
 
     [Header("Cloud Settings")]
     public Texture2D blueNoise; // used to randomly off set the ray origin to reduce layered artifact
@@ -46,15 +50,17 @@ public class RayMarch : MonoBehaviour
     public float phaseFactor = .15f;
 
     public Material material;
-    
+
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
         material.SetTexture("_MainTex", src);
 
+        material.SetFloat("heightMultiplier", heightMultiplier);
         // raymarch settings
         material.SetInt("raymarchStepCount", stepCount);
         material.SetFloat("raymarchStepSize", stepSize);
         material.SetFloat("cloudThickness", cloudThickness);
+        material.SetFloat("distanceDampingFactor", distanceDamping); // reducing the effect of height field further away
         material.SetTexture("BlueNoise", blueNoise);
 
         NoiseGenerator noiseGenerator = FindObjectOfType<NoiseGenerator>();
@@ -89,7 +95,7 @@ public class RayMarch : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
@@ -97,8 +103,10 @@ public class RayMarch : MonoBehaviour
     {
 
     }
-    void OnValidate() {
-        if (stepCount < 10) {
+    void OnValidate()
+    {
+        if (stepCount < 10)
+        {
             stepCount = 10;
         }
     }

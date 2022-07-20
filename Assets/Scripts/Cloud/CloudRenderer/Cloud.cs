@@ -104,7 +104,10 @@ public class Cloud : MonoBehaviour
         material.SetVector("phaseParams", new Vector4(forwardScattering, backScattering, baseBrightness, phaseFactor));
 
         // wave
-        material.SetTexture("HeightMap", oceanGeometry.heightField);
+        material.SetTexture("_DisplacementY", oceanGeometry.displacementY);
+        material.SetTexture("_DisplacementX", oceanGeometry.displacementX);
+        material.SetTexture("_DisplacementZ", oceanGeometry.displacementZ);
+
 
 
 
