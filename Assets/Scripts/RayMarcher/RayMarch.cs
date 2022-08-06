@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-
+[ImageEffectAllowedInSceneView]
 public class RayMarch : MonoBehaviour
 {
 

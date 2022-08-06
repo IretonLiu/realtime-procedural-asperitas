@@ -18,12 +18,19 @@ public class OceanGeometry : MonoBehaviour
     public Vector2 windDirection;
     public float A;
 
+
+    [Header("Choppy Factor")]
+    [Range(0f, 1f)] 
+    public float lambda;
+
+
     [Header("Compute Shaders")]
     public ComputeShader initialSpectrumCompute; // h0(k) h0(-k)
     public ComputeShader fourierAmplitudeCompute;
     public ComputeShader butterflyTextureCompute;
     public ComputeShader butterflyCompute;
     public ComputeShader inversePermutationCompute;
+    public ComputeShader combineCompute;
 
     [Header("Other")]
     // public Material matVis;
@@ -31,16 +38,16 @@ public class OceanGeometry : MonoBehaviour
     public Texture2D gaussianNoiseTexture1;
     public Texture2D gaussianNoiseTexture2;
 
-    public RenderTexture displacementX;
-    public RenderTexture displacementY;
-    public RenderTexture displacementZ;
+    public RenderTexture displacement;
+
+
 
 
     bool shouldUpdateStatic = false;
     FourierGrid fourierGrid;
     WaveGenerator waveGenerator;
 
-    void Start()
+    void Awake()
     {
         updateFourierGrid();
 
@@ -62,13 +69,13 @@ public class OceanGeometry : MonoBehaviour
         }
         waveGenerator.CalcFourierAmplitude();
         waveGenerator.CalcDisplacement();
+        waveGenerator.CombineDisplacement(lambda);
+        displacement = waveGenerator.displacement;
 
         //waveGenerator.fft('x');
         //waveGenerator.fft('z');
         // matVis.SetTexture("_MainTex", waveGenerator.displacement);
-        heightFieldMaterial.SetTexture("_DisplacementY", waveGenerator.displacementY);
-        heightFieldMaterial.SetTexture("_DisplacementX", waveGenerator.displacementX);
-        heightFieldMaterial.SetTexture("_DisplacementZ", waveGenerator.displacementZ);
+        heightFieldMaterial.SetTexture("_Displacement", waveGenerator.displacement);
 
         //     Texture2D tex2 = new Texture2D(h0minusk_RenderTexture.width, h0minusk_RenderTexture.height, TextureFormat.RGB24, false);
         //     RenderTexture.active = h0minusk_RenderTexture;
@@ -112,7 +119,7 @@ public class OceanGeometry : MonoBehaviour
         Color[] pixels2 = gaussianNoiseTexture2.GetPixels();
         waveGenerator = new WaveGenerator(gaussianNoiseTexture1, gaussianNoiseTexture2, fourierGrid);
         waveGenerator.SetComputeShader(initialSpectrumCompute, fourierAmplitudeCompute,
-                                        butterflyTextureCompute, butterflyCompute, inversePermutationCompute);
+                                        butterflyCompute, inversePermutationCompute, combineCompute);
         waveGenerator.SetPhillipsParams(windSpeed, windDirection, A);
         waveGenerator.InitialSpectrum();
         waveGenerator.PrecomputeTwiddleFactorsAndInputIndices();

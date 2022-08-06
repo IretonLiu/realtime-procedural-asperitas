@@ -48,15 +48,7 @@ Shader "Unlit/HeightMapRaymarch"
             float4 _MainTex_ST;
             sampler2D _CameraDepthTexture;
             
-            sampler2D _DisplacementY;
-            float4 _DisplacementY_ST;
-
-            sampler2D _DisplacementX;
-            float4 _DisplacementX_ST;
-
-            sampler2D _DisplacementZ;
-            float4 _DisplacementZ_ST;
-
+            sampler2D _Displacement;
 
             v2f vert (appdata v)
             {
@@ -89,20 +81,21 @@ Shader "Unlit/HeightMapRaymarch"
                 return float2(u, v);
             }
 
-            float3 GetHeightFromMap(float3 p) {
+    /*        float3 GetHeightFromMap(float3 p) {
                 float4 height = tex2Dlod(_DisplacementY, float4(GetUV(p) * 0.1, 0, 0));
                 return float3(0, height.r, 0);
-            }
+            }*/
 
             float3 GetDisplacementFromMap(float3 p){
                 float2 uv = GetUV(p)* 0.1;
 
-                float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
+                float3 displacement = tex2Dlod(_Displacement, float4(uv, 0, 0)).xyz;
+                //float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
 
-                float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
-                float z = tex2Dlod(_DisplacementZ, float4(uv, 0, 0)).r;
+                //float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
+                //float z = tex2Dlod(_DisplacementZ, float4(uv, 0, 0)).r;
 
-                return float3(x, y, z);
+                return displacement;
             }
 
             float sdSphere(float3 p, float s){

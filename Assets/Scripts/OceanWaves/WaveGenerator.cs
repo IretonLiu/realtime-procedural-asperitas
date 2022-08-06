@@ -1,10 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 // [ExecuteInEditMode, ImageEffectAllowedInSceneView]
-public class WaveGenerator
-{
+public class WaveGenerator {
     // Start is called before the first frame update
     static int LOCAL_WORK_GROUP_X = 16;
     static int LOCAL_WORK_GROUP_Y = 16;
@@ -21,6 +18,8 @@ public class WaveGenerator
     ComputeShader butterflyTextureCompute;
     ComputeShader butterflyCompute;
     ComputeShader inversePermutationCompute;
+    ComputeShader combineCompute;
+
 
 
     public RenderTexture h0k_RenderTexture;
@@ -38,37 +37,36 @@ public class WaveGenerator
     public RenderTexture displacementX;
     public RenderTexture displacementY;
     public RenderTexture displacementZ;
+    public RenderTexture displacement;
+
 
 
     bool shouldUpdate;
 
     FourierGrid fourierGrid;
 
-    public WaveGenerator(Texture2D guassianTex1, Texture2D guassianTex2, FourierGrid fourierGrid)
-    {
+    public WaveGenerator(Texture2D guassianTex1, Texture2D guassianTex2, FourierGrid fourierGrid) {
         gaussianNoise1 = guassianTex1;
         gaussianNoise2 = guassianTex2;
         this.fourierGrid = fourierGrid;
     }
 
     public void SetComputeShader(ComputeShader ISCompute, ComputeShader FACompute,
-                                     ComputeShader butterflyTextureCompute, ComputeShader butterflyCompute, ComputeShader IPCompute)
-    {
+                                      ComputeShader butterflyCompute, ComputeShader IPCompute, ComputeShader combineCompute) {
         initialSpectrumCompute = ISCompute;
         fourierAmplitudeCompute = FACompute;
-        this.butterflyTextureCompute = butterflyTextureCompute;
+        //this.butterflyTextureCompute = butterflyTextureCompute;
         this.butterflyCompute = butterflyCompute;
         inversePermutationCompute = IPCompute;
+        this.combineCompute = combineCompute;
     }
 
-    public void SetPhillipsParams(float windSpeed, Vector2 windDirection, float A)
-    {
+    public void SetPhillipsParams(float windSpeed, Vector2 windDirection, float A) {
         this.A = A;
         this.windDirection = windDirection;
         this.windSpeed = windSpeed;
     }
-    public void InitialSpectrum()
-    {
+    public void InitialSpectrum() {
 
 
         // if (h0k_RenderTexture == null)
@@ -99,8 +97,7 @@ public class WaveGenerator
 
     }
 
-    public void CalcFourierAmplitude()
-    {
+    public void CalcFourierAmplitude() {
 
         createTexture(ref hktDy, fourierGrid.N, fourierGrid.M);
         createTexture(ref hktDx, fourierGrid.N, fourierGrid.M);
@@ -124,20 +121,7 @@ public class WaveGenerator
         fourierAmplitudeCompute.Dispatch(fourierAmplitudeKernel, fourierGrid.N / LOCAL_WORK_GROUP_X, fourierGrid.M / LOCAL_WORK_GROUP_Y, 1);
     }
 
-    public void computeButterflyTexture()
-    {
-        createTexture(ref butterflyTexture, (int)Mathf.Log(fourierGrid.N, 2), fourierGrid.M);
-        int butterflyTextureKernel = butterflyTextureCompute.FindKernel("CSButterflyTexture");
-
-        butterflyTextureCompute.SetInt("N", fourierGrid.N);
-        butterflyTextureCompute.SetTexture(butterflyTextureKernel, "butterflyTexture", butterflyTexture);
-
-        butterflyTextureCompute.Dispatch(butterflyTextureKernel, fourierGrid.N / LOCAL_WORK_GROUP_X, fourierGrid.M / LOCAL_WORK_GROUP_Y, 1);
-        return;
-    }
-
-    public void PrecomputeTwiddleFactorsAndInputIndices()
-    {
+    public void PrecomputeTwiddleFactorsAndInputIndices() {
         int size = fourierGrid.N;
         int logSize = (int)Mathf.Log(size, 2);
         RenderTexture rt = new RenderTexture(logSize, size, 0,
@@ -169,12 +153,29 @@ public class WaveGenerator
 
     }
 
-    private void IFFT(RenderTexture input, RenderTexture output)
-    {
+
+    public void CombineDisplacement(float lambda) {
+
+        createTexture(ref displacement, fourierGrid.N, fourierGrid.M);
+
+        int combineKernel = combineCompute.FindKernel("CSCombine");
+
+        combineCompute.SetTexture(combineKernel, "displacementX", displacementX);
+        combineCompute.SetTexture(combineKernel, "displacementY", displacementY);
+        combineCompute.SetTexture(combineKernel, "displacementZ", displacementZ);
+
+        combineCompute.SetTexture(combineKernel, "displacement", displacement);
+
+        combineCompute.SetFloat("lambda", lambda);
+        combineCompute.Dispatch(combineKernel, fourierGrid.N / LOCAL_WORK_GROUP_X, fourierGrid.M / LOCAL_WORK_GROUP_Y, 1);
+
+    }
+
+    private void IFFT(RenderTexture input, RenderTexture output) {
 
         pingpong0 = input;
         createTexture(ref pingpong1, fourierGrid.N, fourierGrid.M);
-        
+
 
         int hButterflyKernel = butterflyCompute.FindKernel("CSHorizontalButterflies");
         int vButterflyKernel = butterflyCompute.FindKernel("CSVerticalButterflies");
@@ -184,8 +185,7 @@ public class WaveGenerator
         butterflyCompute.SetTexture(hButterflyKernel, "pingpong1", pingpong1);
         butterflyCompute.SetTexture(hButterflyKernel, "ButterflyTexture", butterflyTexture);
         // horizontal fft
-        for (int i = 0; i < (int)Mathf.Log(fourierGrid.N, 2); i++)
-        {
+        for (int i = 0; i < (int)Mathf.Log(fourierGrid.N, 2); i++) {
             pingpong = !pingpong;
             butterflyCompute.SetInt("stage", i);
             butterflyCompute.SetInt("direction", 0);
@@ -194,15 +194,14 @@ public class WaveGenerator
 
         }
 
-        pingpong0 = hktDy;
+        //pingpong0 = input;
         butterflyCompute.SetTexture(vButterflyKernel, "pingpong0", pingpong0);
         butterflyCompute.SetTexture(vButterflyKernel, "pingpong1", pingpong1);
         butterflyCompute.SetTexture(vButterflyKernel, "ButterflyTexture", butterflyTexture);
         // vertical fft
         // pingpong = 0;
 
-        for (int i = 0; i < (int)Mathf.Log(fourierGrid.M, 2); i++)
-        {
+        for (int i = 0; i < (int)Mathf.Log(fourierGrid.M, 2); i++) {
             pingpong = !pingpong;
             butterflyCompute.SetInt("stage", i);
             butterflyCompute.SetInt("direction", 1);
@@ -222,14 +221,12 @@ public class WaveGenerator
         inversePermutationCompute.Dispatch(invPermKernel, fourierGrid.N / LOCAL_WORK_GROUP_X, fourierGrid.M / LOCAL_WORK_GROUP_Y, 1);
 
     }
-    void createTexture(ref RenderTexture renderTexture, int xResolution, int yResolution)
-    {
-        if (renderTexture == null || !renderTexture.IsCreated() || renderTexture.width != xResolution || renderTexture.height != yResolution)
-        {
-            if (renderTexture != null)
-            {
-                renderTexture.Release();
-            }
+    void createTexture(ref RenderTexture renderTexture, int xResolution, int yResolution) {
+        if (renderTexture != null) {
+            renderTexture.Release();
+        }
+        else {
+
             renderTexture = new RenderTexture(xResolution, yResolution, 0, RenderTextureFormat.ARGBFloat);
             renderTexture.enableRandomWrite = true;
             renderTexture.wrapMode = TextureWrapMode.Repeat;
