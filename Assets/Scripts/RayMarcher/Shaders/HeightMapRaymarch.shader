@@ -27,7 +27,7 @@ Shader "Unlit/HeightMapRaymarch"
             #define MAX_DIST 20000
             #define SURF_DIST 1e-5
             #define SPHERE_RADIUS 20000
-            #define HORIZON_HEIGHT 19980
+            #define HORIZON_HEIGHT 19900
 
 
             struct appdata
