@@ -1,27 +1,37 @@
-Shader "Unlit/HeightMapRaymarch"
+
+Shader "Unlit/AsperitasRaymarchURP"
 {
+    // The properties block of the Unity shader. In this example this block is empty
+    // because the output color is predefined in the fragment shader code.
     Properties
-    {
-        _MainTex ("Texture", 2D) = "white" {}
-    }
+    { }
+
+        // The SubShader block containing the Shader code.
     SubShader
     {
-        // No culling or depth
-        //Cull Off ZWrite Off ZTest Always
-        
-        Tags { "RenderType"="Opaque"}
-        LOD 100
+        // SubShader Tags define when and under which conditions a SubShader block or
+        // a pass is executed.
+        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
 
         Pass
         {
-            CGPROGRAM
+            // The HLSL code block. Unity SRP uses the HLSL language.
+            HLSLPROGRAM
+            // This line defines the name of the vertex shader.
             #pragma vertex vert
+            // This line defines the name of the fragment shader.
             #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
-            #pragma enable_d3d11_debug_symbols
 
-            #include "UnityCG.cginc"
+            // The Core.hlsl file contains definitions of frequently used HLSL
+            // macros and functions, and also contains #include references to other
+            // HLSL files (for example, Common.hlsl, SpaceTransforms.hlsl, etc.).
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            // The DeclareDepthTexture.hlsl file contains utilities for sampling the Camera
+            // depth texture.
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+
+
 
             #define MAX_STEPS 100
             #define MAX_DIST 20000
@@ -29,80 +39,76 @@ Shader "Unlit/HeightMapRaymarch"
             #define SPHERE_RADIUS 20000
             #define HORIZON_HEIGHT 19900
 
-
-            struct appdata
+            // The structure definition defines which variables it contains.
+            // This example uses the Attributes structure as an input structure in
+            // the vertex shader.
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0;
             };
 
-            struct v2f
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+
+
+            sampler2D _Displacement;
+
+            struct Varyings
             {
                 float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
+                float4 vertex : SV_POSITION; // clip space
                 float3 ro : TEXCOORD1;
                 float3 rd :TEXCOORD2;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-            sampler2D _CameraDepthTexture;
-            
-            sampler2D _Displacement;
-
-            v2f vert (appdata v)
+            // The vertex shader definition with properties defined in the Varyings
+            // structure. The type of the vert function must match the type (struct)
+            // that it returns.
+            Varyings vert(Attributes IN)
             {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = v.uv;
+                Varyings o;
+                o.vertex = TransformObjectToHClip(IN.vertex.xyz);
+                o.uv = IN.uv;
                 o.ro = _WorldSpaceCameraPos;
-                float3 rd = mul(unity_CameraInvProjection, float4(v.uv * 2 - 1, 0, -1));
-                o.rd =  mul(unity_CameraToWorld, float4(rd, 0));
+                float3 rd = mul(unity_CameraInvProjection, float4(IN.uv * 2 - 1, 0, -1));
+                o.rd = mul(unity_CameraToWorld, float4(rd, 0));
                 return o;
             }
-        
-        
+
+
             float remap(float value, float ol, float oh, float nl, float nh) {
                 return nl + (value - ol) * (nh - nl) / (oh - ol);
             }
 
             // raymarch settings
-
             float heightMultiplier;
             float raymarchStepCount;
             float raymarchStepSize;
             float cloudThickness;
             float distanceDampingFactor;
 
-            float2 GetUV(float3 p){
+            float2 GetUV(float3 p) {
                 int d = 25;
-                float u = (p.x + d/2)/d;
-                float v = (p.z + d/2) /d;
+                float u = (p.x + d / 2) / d;
+                float v = (p.z + d / 2) / d;
                 return float2(u, v);
             }
 
-    /*        float3 GetHeightFromMap(float3 p) {
-                float4 height = tex2Dlod(_DisplacementY, float4(GetUV(p) * 0.1, 0, 0));
-                return float3(0, height.r, 0);
-            }*/
-
-            float3 GetDisplacementFromMap(float3 p){
-                float2 uv = GetUV(p)* 0.1;
+            float3 GetDisplacementFromMap(float3 p) {
+                float2 uv = GetUV(p) * 0.1;
 
                 float3 displacement = tex2Dlod(_Displacement, float4(uv, 0, 0)).xyz;
-                //float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
-
-                //float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
-                //float z = tex2Dlod(_DisplacementZ, float4(uv, 0, 0)).r;
 
                 return displacement;
             }
 
-            float sdSphere(float3 p, float s){
-                return length(p) - s; 
+
+            float sdSphere(float3 p, float s) {
+                return length(p) - s;
             }
 
-            float GetDist(float3 p, bool isInner, float distanceDamping){
+            float GetDist(float3 p, bool isInner, float distanceDamping) {
 
                 float3 translation = float3(0, -HORIZON_HEIGHT, 0);
 
@@ -114,43 +120,30 @@ Shader "Unlit/HeightMapRaymarch"
 
                 else
                     d1 = -sdSphere(p - translation, SPHERE_RADIUS + cloudThickness);
-                
-                // float d2 = p.y -h;
-                // float d = sdSphere(p, 10000);
 
-                // return min(d1, d2);
                 return d1;
             }
 
 
-            float Raymarch(float3 ro, float3 rd, float cullDepth, bool isInner){
+            float Raymarch(float3 ro, float3 rd, float cullDepth, bool isInner) {
                 float dO = 0;
                 float dS;
-                float damping = remap(2 *dot(rd, float3(0.0, 1.0, 0.0)), 0.0, 2.0, distanceDampingFactor, 1.0);
-                for (int i = 0; i < MAX_STEPS; i++){
+                float damping = remap(2 * dot(rd, float3(0.0, 1.0, 0.0)), 0.0, 2.0, distanceDampingFactor, 1.0);
+                for (int i = 0; i < MAX_STEPS; i++) {
                     float3 p = ro + dO * rd;
                     dS = GetDist(p, isInner, damping);
                     dO += dS;
 
-                    if (abs(dS) < SURF_DIST || abs(dO) > MAX_DIST || abs(dO) > cullDepth ){
+                    if (abs(dS) < SURF_DIST || abs(dO) > MAX_DIST || abs(dO) > cullDepth) {
                         break;
                     }
                 }
                 return dO;
             }
 
-            //float3 GetNormal(float3 p){
-            //    float2 e = float2(1e-2, 0); // epsilon
-            //    float3 n = GetDist(p) - float3(GetDist(p-e.xyy), GetDist(p-e.yxy), GetDist(p-e.yyx));
-            //    return normalize(n);
-            //}
-
-
-
             float time;
             float baseNoiseScale;
             float3 baseNoiseOffset;
-            // float densityThreshold;
             float densityMultiplier;
 
             float detailNoiseScale;
@@ -249,7 +242,7 @@ Shader "Unlit/HeightMapRaymarch"
                 baseCloudWithCoverage *= coverage;
 
                 // float density = shape.a;
-                float finalCloud = baseCloud*densityMultiplier;
+                float finalCloud = baseCloud * densityMultiplier;
 
                 //// add detailed noise
                 //if (baseCloudWithCoverage > 0) {
@@ -271,7 +264,7 @@ Shader "Unlit/HeightMapRaymarch"
             float lightMarch(float3 samplePos) {
 
                 // uses raymarch to sample accumulative density from light to source sample;
-                float3 dirToLight = _WorldSpaceLightPos0.xyz;
+                float3 dirToLight = _MainLightPosition.xyz;
 
                 float totalDensity = 0;
 
@@ -287,42 +280,30 @@ Shader "Unlit/HeightMapRaymarch"
                 return  darknessThreshold + transmittance * (1 - darknessThreshold);
 
             }
-            
 
-            //float MaxMarchDist(float3 rd) {
-            //    float c = sqrt(pow(SPHERE_RADIUS + cloudThickness, 2) - pow(HORIZON_HEIGHT, 2));
-            //    float3 up = float3 (0, 1, 0);
-            //    float cosTheta = dot(rd, up);
-            //    float cos2Theta = 2 * cosTheta * cosTheta - 1;
-            //    float maxDist = (SPHERE_RADIUS - HORIZON_HEIGHT + cloudThickness) * (1 + cos2Theta) +  c * (1 - cos2Theta);
-
-            //    return maxDist*0.5;
-
-            //}
-
-            fixed4 frag (v2f input) : SV_Target
+            half4 frag(Varyings input) : SV_Target
             {
                 float3 ro = input.ro;
                 float rayLength = length(input.rd);
 
                 float3 rd = input.rd / rayLength; // normalise ray direction
 
-        
-                fixed4 col = 0;
 
-                float nonLinearDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, input.uv);
-                float depth = LinearEyeDepth(nonLinearDepth) * rayLength;
+                half4 col = 0;
+
+                half depth = SampleSceneDepth(input.uv) * rayLength;
+                //float depth = LinearDepthToEyeDepth(rawDepth) * rayLength;
                 float dInner = Raymarch(ro, rd, depth, true);  // distance to inner cloud
                 float dOuter = Raymarch(ro, rd, depth, false); // distance to outer sphere
-                if (dInner < MAX_DIST && dInner < depth){
+                if (dInner < MAX_DIST && dInner < depth) {
 
                     float3 p = ro + rd * abs(dInner);
                     // random offset on the starting position to remove the layering artifact
                     float randomOffset = BlueNoise.SampleLevel(samplerBlueNoise, input.uv * 1000, 0);
-                    float dstTravelled = (randomOffset - 0.5)  * raymarchStepSize + dInner;
+                    float dstTravelled = (randomOffset - 0.5) * raymarchStepSize + dInner;
                     // float dstTravelled = 0;
 
-                    float cosAngle = dot(normalize(rd), normalize(_WorldSpaceLightPos0.xyz));
+                    float cosAngle = dot(normalize(rd), normalize(_MainLightPosition.xyz));
                     float phaseVal = phaseFunction(cosAngle);
                     float transmittance = 1; // extinction
                     float3 lightEnergy = 0; // the amount of light reaches the eye  
@@ -331,28 +312,28 @@ Shader "Unlit/HeightMapRaymarch"
 
                     // change how ray march is terminated{
                     //for (int i = 0; i < raymarchStepCount; i++) {
-                    while(dstTravelled < dOuter){
-                    	float3 startPos = p + rd * (dstTravelled);
-                    	float density = sampleDensity(startPos) ;
+                    while (dstTravelled < dOuter) {
+                        float3 startPos = p + rd * (dstTravelled);
+                        float density = sampleDensity(startPos);
                         //float density = 0.005 * (d * 0.01);
-                    	if (density > 0) {
-                    		// totalDensity += density;
-                    		float lightTransmittance = lightMarch(startPos);
+                        if (density > 0) {
+                            // totalDensity += density;
+                            float lightTransmittance = lightMarch(startPos);
 
-                    		lightEnergy += density * raymarchStepSize * transmittance * lightTransmittance * phaseVal;
+                            lightEnergy += density * raymarchStepSize * transmittance * lightTransmittance * phaseVal;
 
-                    		transmittance *= beer(density * raymarchStepSize, lightAbsorptionThroughCloud);// as the ray marches further in, the more the light will be lost
-                    		// Exit early if T is close to zero as further samples won't affect the result much
-                    		if (transmittance < 0.001) {
-                    			break;
-                    		}
-                    	}
+                            transmittance *= beer(density * raymarchStepSize, lightAbsorptionThroughCloud);// as the ray marches further in, the more the light will be lost
+                            // Exit early if T is close to zero as further samples won't affect the result much
+                            if (transmittance < 0.001) {
+                                break;
+                            }
+                        }
 
                         //if (density == 0.0) {
                         //    return float4(1.0, 0.0, 0.0, 0.0);
                         //    
                         //}
-                    	dstTravelled += raymarchStepSize;
+                        dstTravelled += raymarchStepSize;
 
                     }
                     /*float4 color = tex2Dlod (_HeightMap, float4(GetUV(p), 0, 0)*0.01);
@@ -369,15 +350,16 @@ Shader "Unlit/HeightMapRaymarch"
                     //   
                     //}
                     float3 cloudCol = lightEnergy * lightColor.xyz;
-                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner / dOuter)* 3;
+                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol * (dInner / dOuter) * 3;
                     //col.rgb = d * 0.0001;
 
-                }else col.rgb = tex2D(_MainTex, input.uv);
+                }
+                else col.rgb = tex2D(_MainTex, input.uv);
                 // float3 color = tex2Dlod (_MainTex, float4(i.uv, 0, 0)).rgb;
                  //col.rgb = d *0.1;
                 return col;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }
