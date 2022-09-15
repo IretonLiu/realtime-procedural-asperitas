@@ -26,8 +26,9 @@ Shader "Unlit/HeightMapRaymarch"
             #define MAX_STEPS 100
             #define MAX_DIST 20000
             #define SURF_DIST 1e-5
-            #define SPHERE_RADIUS 20000
-            #define HORIZON_HEIGHT 19900
+            #define SPHERE_RADIUS 40000
+            #define HORIZON_HEIGHT 39200
+            #define PI 3.14159265358979
 
 
             struct appdata
@@ -49,6 +50,9 @@ Shader "Unlit/HeightMapRaymarch"
             sampler2D _CameraDepthTexture;
             
             sampler2D _Displacement;
+
+            Texture2D<float4> WeatherMap;
+            SamplerState samplerWeatherMap;
 
             v2f vert (appdata v)
             {
@@ -86,10 +90,18 @@ Shader "Unlit/HeightMapRaymarch"
                 return float3(0, height.r, 0);
             }*/
 
-            float3 GetDisplacementFromMap(float3 p){
-                float2 uv = GetUV(p)* 0.1;
+            float2 rot2D(float2 uv, float theta) {
+                return float2(uv.x * cos(theta) + uv.y * sin(theta), -uv.x * sin(theta) + uv.y * cos(theta));
+            }
 
+            float3 GetDisplacementFromMap(float3 p){
+                float2 uv = GetUV(p) * 0.005;
+                //float2 uv2 = rot2D(GetUV(p)*0.1, PI/4) ;
                 float3 displacement = tex2Dlod(_Displacement, float4(uv, 0, 0)).xyz;
+
+                // this noise has tiling issues
+                float dispNoise = WeatherMap.SampleLevel(samplerWeatherMap, uv, 0).r;
+                displacement += dispNoise*50;
                 //float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
 
                 //float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
@@ -175,8 +187,7 @@ Shader "Unlit/HeightMapRaymarch"
             Texture3D<float4> DetailNoise;
             SamplerState samplerDetailNoise;
 
-            Texture2D<float4> WeatherMap;
-            SamplerState samplerWeatherMap;
+
 
             // lighting
             float beer(float d, float b) {
@@ -264,7 +275,7 @@ Shader "Unlit/HeightMapRaymarch"
 
                 //}
 
-                return finalCloud * 0.1;
+                return finalCloud;
             }
 
             // march from sample point to light source
@@ -333,7 +344,7 @@ Shader "Unlit/HeightMapRaymarch"
                     //for (int i = 0; i < raymarchStepCount; i++) {
                     while(dstTravelled < dOuter){
                     	float3 startPos = p + rd * (dstTravelled);
-                    	float density = sampleDensity(startPos) ;
+                    	float density = sampleDensity(startPos);
                         //float density = 0.005 * (d * 0.01);
                     	if (density > 0) {
                     		// totalDensity += density;
@@ -368,8 +379,8 @@ Shader "Unlit/HeightMapRaymarch"
 
                     //   
                     //}
-                    float3 cloudCol = lightEnergy * lightColor.xyz;
-                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner / dOuter)* 3;
+                    float3 cloudCol = lightEnergy * lightColor.xyz *0.5;
+                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner/ dOuter);
                     //col.rgb = d * 0.0001;
 
                 }else col.rgb = tex2D(_MainTex, input.uv);

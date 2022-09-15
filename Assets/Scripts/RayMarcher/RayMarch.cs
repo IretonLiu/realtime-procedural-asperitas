@@ -53,6 +53,8 @@ public class RayMarch : MonoBehaviour
 
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
+        Graphics.Blit(src, dest);
+
         material.SetTexture("_MainTex", src);
 
         material.SetFloat("heightMultiplier", heightMultiplier);
@@ -90,7 +92,10 @@ public class RayMarch : MonoBehaviour
         material.SetFloat("lightAbsorptionTowardSun", lightAbsorptionTowardSun);
         material.SetVector("phaseParams", new Vector4(forwardScattering, backScattering, baseBrightness, phaseFactor));
 
-        Graphics.Blit(src, dest, material);
+        if(material)
+            Graphics.Blit(src, dest, material);
+        else Graphics.Blit(src, dest);
+
     }
     // Start is called before the first frame update
     void Start()
