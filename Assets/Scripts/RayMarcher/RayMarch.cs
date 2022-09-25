@@ -53,8 +53,6 @@ public class RayMarch : MonoBehaviour
 
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
-        Graphics.Blit(src, dest);
-
         material.SetTexture("_MainTex", src);
 
         material.SetFloat("heightMultiplier", heightMultiplier);

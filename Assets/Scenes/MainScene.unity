@@ -160,43 +160,6 @@ RenderTexture:
   m_Dimension: 3
   m_VolumeDepth: 128
   m_ShadowSamplingMode: 2
---- !u!84 &289959939
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 5
-  m_Width: 512
-  m_Height: 512
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 0
-  m_ColorFormat: 8
-  m_MipMap: 0
-  m_GenerateMips: 1
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 1
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 0
-    m_WrapV: 0
-    m_WrapW: 0
-  m_Dimension: 2
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &316898556
 GameObject:
   m_ObjectHideFlags: 0
@@ -249,7 +212,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -594,11 +557,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83bb2ff290e63504087331e3fb35847a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  heightMultiplier: 10
   stepCount: 30
   stepSize: 10
-  cloudThickness: 1000
-  distanceDamping: 0.8
   blueNoise: {fileID: 0}
   baseNoiseOffset: {x: 0, y: 0, z: 0}
   baseNoiseScale: 1
@@ -667,17 +627,15 @@ MonoBehaviour:
   windSpeed: 40
   windDirection: {x: 1, y: -1}
   A: 4
-  lambda: 0
   initialSpectrumCompute: {fileID: 7200000, guid: ceb5b4c963c67e441865f5c6781b220d, type: 3}
   fourierAmplitudeCompute: {fileID: 7200000, guid: e7315505a1b32b348b70ac8292ba921f, type: 3}
   butterflyTextureCompute: {fileID: 7200000, guid: 42081297a3aac104baadb46a323d88b8, type: 3}
   butterflyCompute: {fileID: 7200000, guid: 1456acca544713a45a52341a70048f42, type: 3}
   inversePermutationCompute: {fileID: 7200000, guid: dd3ad0ccd7b4659479657a221e45c43a, type: 3}
-  combineCompute: {fileID: 0}
   heightFieldMaterial: {fileID: 2100000, guid: 23dd7e2e75dfb0b43b4a020448220fbf, type: 2}
   gaussianNoiseTexture1: {fileID: 1433783558}
   gaussianNoiseTexture2: {fileID: 922620095}
-  displacement: {fileID: 0}
+  heightField: {fileID: 1679750225}
 --- !u!28 &1433783558
 Texture2D:
   m_ObjectHideFlags: 0
@@ -864,7 +822,7 @@ MonoBehaviour:
   noiseOffset2: {x: 1.39, y: -2.18}
   frequency3: 3.75
   noiseOffset3: {x: 2.2, y: 0.32}
-  WMRenderTexture: {fileID: 289959939}
+  WMRenderTexture: {fileID: 1764188855}
   computeShader: {fileID: 7200000, guid: 3b469523b94924448bca011c7f647be6, type: 3}
   shouldUpdateNoise: 0
 --- !u!114 &1560399913
@@ -884,7 +842,7 @@ MonoBehaviour:
   perlinFbmOctaves: 0
   baseRenderTexture: {fileID: 126806212}
   detailRenderTexture: {fileID: 1941048133}
-  shouldUpdateNoise: 1
+  shouldUpdateNoise: 0
 --- !u!4 &1560399914
 Transform:
   m_ObjectHideFlags: 0
@@ -900,6 +858,80 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!84 &1679750225
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 5
+  m_Width: 256
+  m_Height: 256
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 52
+  m_MipMap: 0
+  m_GenerateMips: 0
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 2
+    m_Aniso: 6
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
+--- !u!84 &1764188855
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_ForcedFallbackFormat: 4
+  m_DownscaleFallback: 0
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 5
+  m_Width: 512
+  m_Height: 512
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 0
+  m_ColorFormat: 8
+  m_MipMap: 0
+  m_GenerateMips: 1
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 1
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_Dimension: 2
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!84 &1941048133
 RenderTexture:
   m_ObjectHideFlags: 0

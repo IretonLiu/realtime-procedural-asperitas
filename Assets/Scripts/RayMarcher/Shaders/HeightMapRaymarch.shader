@@ -7,9 +7,9 @@ Shader "Unlit/HeightMapRaymarch"
     SubShader
     {
         // No culling or depth
-        //Cull Off ZWrite Off ZTest Always
+        Cull Off ZWrite Off ZTest Always
         
-        Tags { "RenderType"="Opaque"}
+        Tags { "RenderType"="Opaque" }
         LOD 100
 
         Pass
