@@ -9,11 +9,14 @@ public class RayMarch : MonoBehaviour
 
     [Header("Height Multiplier")]
     public float heightMultiplier = 10;
+    [Header("Height Field Scale")]
+    public float heightFieldScale = 0.01f;
 
     [Header("Raymarch Settings")]
     public int stepCount = 30;
     [Range(1, 100)]
-    public float stepSize = 10;
+    public float rayMarchStepSize = 10;
+    public float lightMarchStepSize = 10;
     public float cloudThickness = 1000;
     [Range(0, 1)]
     public float distanceDamping = 0.8f;
@@ -33,13 +36,14 @@ public class RayMarch : MonoBehaviour
     public float densityMultiplier = 1;
     [Range(0, 5)]
     public float globalCoverageMultiplier;
+    
 
     [Header("Lighting")]
     public Light sunLight;
     [Range(0, 1)]
     public float darknessThreshold = 0;
-    public float lightAbsorptionThroughCloud = 1;
-    public float lightAbsorptionTowardSun = 1;
+    public float extinctionFactor = 1;
+    public float scatteringFactor = 1;
     [Range(0, 1)]
     public float forwardScattering = .83f;
     [Range(0, 1)]
@@ -58,9 +62,11 @@ public class RayMarch : MonoBehaviour
         material.SetTexture("_MainTex", src);
 
         material.SetFloat("heightMultiplier", heightMultiplier);
+        material.SetFloat("heightFieldScale", heightFieldScale);
         // raymarch settings
         material.SetInt("raymarchStepCount", stepCount);
-        material.SetFloat("raymarchStepSize", stepSize);
+        material.SetFloat("raymarchStepSize", rayMarchStepSize);
+        material.SetFloat("lightmarchStepSize", lightMarchStepSize);
         material.SetFloat("cloudThickness", cloudThickness);
         material.SetFloat("distanceDampingFactor", distanceDamping); // reducing the effect of height field further away
         material.SetTexture("BlueNoise", blueNoise);
@@ -88,8 +94,8 @@ public class RayMarch : MonoBehaviour
         // values related to lighting the cloud
         material.SetVector("lightColor", sunLight.color);
         material.SetFloat("darknessThreshold", darknessThreshold);
-        material.SetFloat("lightAbsorptionThroughCloud", lightAbsorptionThroughCloud);
-        material.SetFloat("lightAbsorptionTowardSun", lightAbsorptionTowardSun);
+        material.SetFloat("extinctionFactor", extinctionFactor);
+        material.SetFloat("scatteringFactor", scatteringFactor);
         material.SetVector("phaseParams", new Vector4(forwardScattering, backScattering, baseBrightness, phaseFactor));
 
         if(material)

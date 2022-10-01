@@ -17,6 +17,7 @@ public class OceanGeometry : MonoBehaviour
     public float windSpeed;
     public Vector2 windDirection;
     public float A;
+    public float AScalingFactor;
 
 
     [Header("Choppy Factor")]
@@ -87,15 +88,15 @@ public class OceanGeometry : MonoBehaviour
     void OnValidate()
     {
         // update mesh settings
-        if (N < 256) N = 256;
-        if (M < 256) M = 256;
+        if (N < 64) N = 64;
+        if (M < 64) M = 64;
         if (Lx < 1) Lx = 1;
         if (Lz < 1) Lz = 1;
 
         if (isSquare)
         {
             M = N;
-            Lz = Lx;
+            //Lz = Lx;
         }
         shouldUpdateStatic = true;
     }
@@ -120,7 +121,9 @@ public class OceanGeometry : MonoBehaviour
         waveGenerator = new WaveGenerator(gaussianNoiseTexture1, gaussianNoiseTexture2, fourierGrid);
         waveGenerator.SetComputeShader(initialSpectrumCompute, fourierAmplitudeCompute,
                                         butterflyCompute, inversePermutationCompute, combineCompute);
-        waveGenerator.SetPhillipsParams(windSpeed, windDirection, A);
+
+
+        waveGenerator.SetPhillipsParams(windSpeed, windDirection, (float)(A * AScalingFactor));
         waveGenerator.InitialSpectrum();
         waveGenerator.PrecomputeTwiddleFactorsAndInputIndices();
 

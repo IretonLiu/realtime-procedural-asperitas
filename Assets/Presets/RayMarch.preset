@@ -14,7 +14,7 @@ Preset:
   m_Properties:
   - target: {fileID: 0}
     propertyPath: m_Enabled
-    value: 0
+    value: 1
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: m_EditorHideFlags
@@ -25,17 +25,37 @@ Preset:
     value: 
     objectReference: {fileID: 0}
   - target: {fileID: 0}
-    propertyPath: stepCount
-    value: 30
+    propertyPath: heightMultiplier
+    value: 1
     objectReference: {fileID: 0}
   - target: {fileID: 0}
-    propertyPath: stepSize
+    propertyPath: heightFieldScale
+    value: 0.018
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: stepCount
     value: 10
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: rayMarchStepSize
+    value: 10
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: lightMarchStepSize
+    value: 100
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: cloudThickness
+    value: 2200
+    objectReference: {fileID: 0}
+  - target: {fileID: 0}
+    propertyPath: distanceDamping
+    value: 0.8
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: blueNoise
     value: 
-    objectReference: {fileID: 0}
+    objectReference: {fileID: 2800000, guid: e669c400140a28d498e9d87e1517ab2f, type: 3}
   - target: {fileID: 0}
     propertyPath: baseNoiseOffset.x
     value: 0
@@ -50,7 +70,7 @@ Preset:
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: baseNoiseScale
-    value: 4
+    value: 0.5
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: detailNoiseOffset.x
@@ -82,34 +102,34 @@ Preset:
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: darknessThreshold
-    value: 0.37
+    value: 0
     objectReference: {fileID: 0}
   - target: {fileID: 0}
-    propertyPath: lightAbsorptionThroughCloud
-    value: 0.85
+    propertyPath: extinctionFactor
+    value: 0.17
     objectReference: {fileID: 0}
   - target: {fileID: 0}
-    propertyPath: lightAbsorptionTowardSun
-    value: 1.22
+    propertyPath: scatteringFactor
+    value: 2.4
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: forwardScattering
-    value: 0.715
+    value: 0.817
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: backScattering
-    value: 0.279
+    value: 0.559
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: baseBrightness
-    value: 0.81
+    value: 0.948
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: phaseFactor
-    value: 0.365
+    value: 0.254
     objectReference: {fileID: 0}
   - target: {fileID: 0}
     propertyPath: material
     value: 
-    objectReference: {fileID: 0}
+    objectReference: {fileID: 2100000, guid: 23dd7e2e75dfb0b43b4a020448220fbf, type: 2}
   m_ExcludedProperties: []

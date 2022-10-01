@@ -26,8 +26,8 @@ Shader "Unlit/HeightMapRaymarch"
             #define MAX_STEPS 100
             #define MAX_DIST 20000
             #define SURF_DIST 1e-5
-            #define SPHERE_RADIUS 40000
-            #define HORIZON_HEIGHT 39200
+            #define SPHERE_RADIUS 100000
+            #define HORIZON_HEIGHT 99200
             #define PI 3.14159265358979
 
 
@@ -73,8 +73,10 @@ Shader "Unlit/HeightMapRaymarch"
             // raymarch settings
 
             float heightMultiplier;
+            float heightFieldScale;
             float raymarchStepCount;
-            float raymarchStepSize;
+            float raymarchStepSize;    
+            float lightMarchStepSize;
             float cloudThickness;
             float distanceDampingFactor;
 
@@ -95,13 +97,14 @@ Shader "Unlit/HeightMapRaymarch"
             }
 
             float3 GetDisplacementFromMap(float3 p){
-                float2 uv = GetUV(p) * 0.005;
+                float2 uv = GetUV(p) * heightFieldScale;
                 //float2 uv2 = rot2D(GetUV(p)*0.1, PI/4) ;
                 float3 displacement = tex2Dlod(_Displacement, float4(uv, 0, 0)).xyz;
+                float3 displacement2  = tex2Dlod(_Displacement, float4(rot2D(uv, PI/3), 0, 0)).xyz;
 
                 // this noise has tiling issues
                 float dispNoise = WeatherMap.SampleLevel(samplerWeatherMap, uv, 0).r;
-                displacement += dispNoise*50;
+                displacement = (displacement+displacement2)/2+dispNoise*20;
                 //float y = heightMultiplier * tex2Dlod(_DisplacementY, float4(uv, 0, 0)).r;
 
                 //float x = tex2Dlod(_DisplacementX, float4(uv, 0, 0)).r;
@@ -123,7 +126,6 @@ Shader "Unlit/HeightMapRaymarch"
                     float3 displacement = distanceDamping * GetDisplacementFromMap(p);
                     d1 = -sdSphere(p - translation + displacement, SPHERE_RADIUS);
                 }
-
                 else
                     d1 = -sdSphere(p - translation, SPHERE_RADIUS + cloudThickness);
                 
@@ -173,8 +175,8 @@ Shader "Unlit/HeightMapRaymarch"
 
             float4 lightColor;
             float darknessThreshold;
-            float lightAbsorptionThroughCloud;
-            float lightAbsorptionTowardSun;
+            float extinctionFactor;
+            float scatteringFactor;
             float4 phaseParams;
 
 
@@ -287,29 +289,20 @@ Shader "Unlit/HeightMapRaymarch"
                 float totalDensity = 0;
 
                 for (int i = 0; i < 6; i++) {
-                    samplePos += dirToLight * raymarchStepSize;
-                    totalDensity += max(0, sampleDensity(samplePos) * raymarchStepSize);
+                    samplePos += dirToLight * lightMarchStepSize;
+                    totalDensity += max(0, sampleDensity(samplePos) * lightMarchStepSize);
                     //totalDensity += max(0, 0.1 * raymarchStepSize);
                     // dstTravelled += stepSize;
                 }
 
-                float transmittance = max(beer(totalDensity, lightAbsorptionTowardSun), beer(totalDensity * 0.25, lightAbsorptionTowardSun) * 0.7);
+                //float transmittance = max(beer(totalDensity, lightAbsorptionTowardSun), beer(totalDensity * 0.25, lightAbsorptionTowardSun) * 0.7);
+                float transmittance = exp(-totalDensity * extinctionFactor);
 
-                return  darknessThreshold + transmittance * (1 - darknessThreshold);
+                //return  darknessThreshold + transmittance * (1 - darknessThreshold);
+                return transmittance;
 
             }
-            
-
-            //float MaxMarchDist(float3 rd) {
-            //    float c = sqrt(pow(SPHERE_RADIUS + cloudThickness, 2) - pow(HORIZON_HEIGHT, 2));
-            //    float3 up = float3 (0, 1, 0);
-            //    float cosTheta = dot(rd, up);
-            //    float cos2Theta = 2 * cosTheta * cosTheta - 1;
-            //    float maxDist = (SPHERE_RADIUS - HORIZON_HEIGHT + cloudThickness) * (1 + cos2Theta) +  c * (1 - cos2Theta);
-
-            //    return maxDist*0.5;
-
-            //}
+           
 
             fixed4 frag (v2f input) : SV_Target
             {
@@ -318,7 +311,7 @@ Shader "Unlit/HeightMapRaymarch"
 
                 float3 rd = input.rd / rayLength; // normalise ray direction
 
-        
+                
                 fixed4 col = 0;
 
                 float nonLinearDepth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, input.uv);
@@ -330,7 +323,7 @@ Shader "Unlit/HeightMapRaymarch"
                     float3 p = ro + rd * abs(dInner);
                     // random offset on the starting position to remove the layering artifact
                     float randomOffset = BlueNoise.SampleLevel(samplerBlueNoise, input.uv * 1000, 0);
-                    float dstTravelled = (randomOffset - 0.5)  * raymarchStepSize + dInner;
+                    float dstTravelled = dInner;
                     // float dstTravelled = 0;
 
                     float cosAngle = dot(normalize(rd), normalize(_WorldSpaceLightPos0.xyz));
@@ -350,9 +343,9 @@ Shader "Unlit/HeightMapRaymarch"
                     		// totalDensity += density;
                     		float lightTransmittance = lightMarch(startPos);
 
-                    		lightEnergy += density * raymarchStepSize * transmittance * lightTransmittance * phaseVal;
+                    		transmittance *= exp(-density * extinctionFactor * raymarchStepSize);// as the ray marches further in, the more the light will be lost
+                    		lightEnergy += transmittance * lightTransmittance * phaseVal*raymarchStepSize*scatteringFactor*density;
 
-                    		transmittance *= beer(density * raymarchStepSize, lightAbsorptionThroughCloud);// as the ray marches further in, the more the light will be lost
                     		// Exit early if T is close to zero as further samples won't affect the result much
                     		if (transmittance < 0.001) {
                     			break;
@@ -366,22 +359,12 @@ Shader "Unlit/HeightMapRaymarch"
                     	dstTravelled += raymarchStepSize;
 
                     }
-                    /*float4 color = tex2Dlod (_HeightMap, float4(GetUV(p), 0, 0)*0.01);
-                    col.rgb = 0.6 - remap(color.r, -1.0, 1.0, 0.0, .5);*/
 
-                    //float c = 1.0/(d * 0.01);
-                    //col.rgb = c;
-
-                    //if (transmittance == 1.0) {
-                    //    col.rgb = float3(1.0, 0.0, 0.0);
-                    //}
-                    //else {
-
-                    //   
-                    //}
-                    float3 cloudCol = lightEnergy * lightColor.xyz *0.5;
-                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner/ dOuter);
-                    //col.rgb = d * 0.0001;
+                    // makes further clouds darker
+                    float distanceMultiplier = remap(dot(rd, float3(0,1,0)), 0,1,0.1,0.5);
+                    float3 cloudCol = lightEnergy * lightColor.xyz ;
+                    col.rgb = tex2D(_MainTex, input.uv) * transmittance + cloudCol *(dInner/ dOuter) * distanceMultiplier;
+                    //col.rgb = cloudCol+tex2D(_MainTex, input.uv) * transmittance ;
 
                 }else col.rgb = tex2D(_MainTex, input.uv);
                 // float3 color = tex2Dlod (_MainTex, float4(i.uv, 0, 0)).rgb;
