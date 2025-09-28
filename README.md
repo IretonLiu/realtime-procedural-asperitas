@@ -62,6 +62,4 @@ By using the FFT simulation to modulate the height and motion of the volumetric 
 * Optimization for **real-time performance** on GPU.
 * Adding **weather-driven parameters** for cloud formation dynamics.
 
----
 
-## 🔹 References
