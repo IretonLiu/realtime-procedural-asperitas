@@ -27,8 +27,38 @@ Key features include:
 
 Volumetric rendering represents clouds as 3D density fields rather than flat textures. In this project, **procedural noise** is used to generate density and detail at multiple scales, producing realistic turbulence and texture.
 
-You can read more about the original volumetric rendering project here: [Volumetric Rendering Project Link](INSERT_LINK_HERE)
+You can read more about the original volumetric rendering project here: [Volumetric Rendering Project Link](https://github.com/IretonLiu/cloud-simulation-unity)
 
 ### FFT-Based Wave Simulation
 
-Fast Fourier Transform (FFT) techniques are typically used for simulating ocean surfac
+Fast Fourier Transform (FFT) techniques are typically used for simulating ocean surfaces by decomposing waves into frequency components. Here, we repurpose this method to create undulating cloud surfaces, giving the clouds a realistic rolling motion.
+
+You can read more about the original wave simulation project here: [FFT Wave Simulation Project Link](https://github.com/IretonLiu/OceanSim-IFFT)
+
+### Combining the Two
+
+By using the FFT simulation to modulate the height and motion of the volumetric noise, we achieve the characteristic undulating appearance of Asperitas clouds while preserving the rich internal volumetric detail.
+
+---
+
+## 🔹 Screenshots
+
+### Example Render 1
+
+![Screenshot 1](INSERT_SCREENSHOT_1_HERE)
+
+### Example Render 2
+
+![Screenshot 2](INSERT_SCREENSHOT_2_HERE)
+
+---
+
+## 🔹 Future Improvements
+
+* Integration of **lighting and shadows** for more realistic cloud illumination.
+* Optimization for **real-time performance** on GPU.
+* Adding **weather-driven parameters** for cloud formation dynamics.
+
+---
+
+## 🔹 References
