@@ -45,11 +45,14 @@ By using the FFT simulation to modulate the height and motion of the volumetric 
 
 ### Example Render 1
 
-![Screenshot 1](INSERT_SCREENSHOT_1_HERE)
+![Screenshot 1](chaotic.png)
 
 ### Example Render 2
 
-![Screenshot 2](INSERT_SCREENSHOT_2_HERE)
+![Screenshot 2](flat.png)
+
+### Photo Reference
+![Photo Reference](asperitas2.jpg)
 
 ---
 
